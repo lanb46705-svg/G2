@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>趣味数学：爬坑与注水系列</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;700;900&display=swap');
+
+        :root {
+            --bg-main: #f0fdfa;
+            --font-main: 'Noto Sans SC', sans-serif;
+            --font-fun: 'ZCOOL KuaiLe', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-main);
+            color: #1e293b;
+            overflow-x: hidden;
+        }
+
+        .title-font { font-family: var(--font-fun); }
+
+        /* 动画与过渡 */
+        .smooth-move {
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        y 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 角色微动效 */
+        @keyframes wiggle {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(0, -3px) rotate(-3deg); }
+            75% { transform: translate(0, -1px) rotate(3deg); }
+        }
+        .anim-wiggle { animation: wiggle 0.4s infinite; }
+
+        @keyframes water-wave {
+            0%, 100% { d: path("M 0 0 Q 25 5 50 0 T 100 0 L 100 100 L 0 100 Z"); }
+            50% { d: path("M 0 0 Q 25 -5 50 0 T 100 0 L 100 100 L 0 100 Z"); }
+        }
+
+        /* 滚动条隐藏但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 关卡按钮激活状态 */
+        .level-btn.active {
+            background-color: #f59e0b;
+            color: white;
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-color: #d97706;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-4 px-2 sm:px-6">
+
+    <!-- 顶部导航与关卡选择 -->
+    <header class="w-full max-w-6xl mb-6 flex flex-col items-center">
+        <h1 class="text-3xl md:text-4xl font-bold title-font text-emerald-600 mb-4 flex items-center gap-3">
+            <span>⭐</span> 趣味数学：爬坑与注水系列探险 <span>⭐</span>
+        </h1>
+        
+        <!-- 关卡选择器 -->
+        <div class="flex flex-wrap justify-center gap-2 bg-white p-2 rounded-2xl shadow-sm border-2 border-emerald-100 w-full max-w-4xl">
+            <button onclick="loadLevel('t1')" id="btn-t1" class="level-btn active flex-1 min-w-[100px] py-2 px-3 rounded-xl border-2 border-transparent bg-gray-50 text-gray-600 font-bold text-sm transition-all hover:bg-orange-100">
+                探索1<br><span class="text-xs font-normal">蚂蚁爬坑(求天数)</span>
+            </button>
+            <button onclick="loadLevel('t3')" id="btn-t3" class="level-btn flex-1 min-w-[100px] py-2 px-3 rounded-xl border-2 border-transparent bg-gray-50 text-gray-600 font-bold text-sm transition-all hover:bg-blue-100">
+                探索3<br><span class="text-xs font-normal">水缸打水(求天数)</span>
+            </button>
+            <button onclick="loadLevel('t4')" id="btn-t4" class="level-btn flex-1 min-w-[100px] py-2 px-3 rounded-xl border-2 border-transparent bg-gray-50 text-gray-600 font-bold text-sm transition-all hover:bg-green-100">
+                探索4<br><span class="text-xs font-normal">树懒爬树(求总高)</span>
+            </button>
+            <button onclick="loadLevel('t5')" id="btn-t5" class="level-btn flex-1 min-w-[100px] py-2 px-3 rounded-xl border-2 border-transparent bg-gray-50 text-gray-600 font-bold text-sm transition-all hover:bg-purple-100">
+                探索5<br><span class="text-xs font-normal">蚂蚁爬井(求总高)</span>
+            </button>
+            <button onclick="loadLevel('t7')" id="btn-t7" class="level-btn flex-1 min-w-[100px] py-2 px-3 rounded-xl border-2 border-transparent bg-gray-50 text-gray-600 font-bold text-sm transition-all hover:bg-teal-100">
+                探索7<br><span class="text-xs font-normal">树懒爬树(求单次)</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- 左侧：题目与图解 (占 4 列) -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            
+            <!-- 故事板 -->
+            <div class="bg-white rounded-3xl p-5 shadow-xl border-t-8 border-emerald-400">
+                <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                    <span class="bg-emerald-100 text-emerald-600 p-1.5 rounded-lg text-sm">📖</span> 闯关故事
+                </h2>
+                <div id="story-board" class="text-[15px] leading-relaxed text-gray-700 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                    <!-- 动态注入故事 -->
+                </div>
+            </div>
+
+            <!-- 数据指示器 -->
+            <div class="bg-white rounded-3xl p-4 shadow-md flex justify-around items-center text-center border-2 border-gray-100">
+                <div>
+                    <p class="text-xs text-gray-400 font-bold mb-1">当前天数</p>
+                    <p class="text-3xl font-black text-indigo-500 font-mono" id="ui-day">0</p>
+                </div>
+                <div class="w-px h-8 bg-gray-200"></div>
+                <div>
+                    <p class="text-xs text-gray-400 font-bold mb-1">当前进度</p>
+                    <p class="text-3xl font-black text-orange-500 font-mono">
+                        <span id="ui-val">0</span><span class="text-base text-gray-400" id="ui-unit">m</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2年级破题秘籍 -->
+            <div class="bg-gradient-to-b from-orange-50 to-yellow-50 rounded-3xl p-5 shadow-xl border-2 border-orange-200 flex-grow">
+                <h2 class="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
+                    <span class="bg-orange-200 text-orange-700 p-1.5 rounded-lg text-sm">💡</span> 2年级破题秘籍
+                </h2>
+                <div id="math-board" class="space-y-3 text-sm text-gray-800">
+                    <!-- 动态注入解析 -->
+                </div>
+            </div>
+            
+        </section>
+
+        <!-- 中间：核心动画展示区 (占 5 列) -->
+        <section class="lg:col-span-5 bg-white rounded-[40px] shadow-2xl overflow-hidden relative flex flex-col border-4 border-gray-100">
+            
+            <div class="w-full h-[650px] relative bg-sky-50 flex justify-center" id="svg-container">
+                <svg id="stage" viewBox="0 0 400 650" class="w-full h-full block">
+                    <defs>
+                        <linearGradient id="pitDirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8e44ad"/><stop offset="100%" stop-color="#4834d4"/></linearGradient>
+                        <linearGradient id="treeBark" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8B4513"/><stop offset="50%" stop-color="#A0522D"/><stop offset="100%" stop-color="#8B4513"/></linearGradient>
+                        <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00a8ff"/><stop offset="100%" stop-color="#0097e6"/></linearGradient>
+                        
+                        <!-- 蚂蚁角色 -->
+                        <g id="model-ant">
+                            <path d="M -15 0 Q -20 -20 -5 -30 M 0 0 Q 5 -25 25 -20 M 15 0 Q 25 -15 35 -5" stroke="#ff7675" stroke-width="3" fill="none"/>
+                            <path d="M -15 0 Q -20 20 -5 30 M 0 0 Q 5 25 25 20 M 15 0 Q 25 15 35 5" stroke="#ff7675" stroke-width="3" fill="none"/>
+                            <ellipse cx="-20" cy="0" rx="16" ry="12" fill="#d63031" />
+                            <circle cx="0" cy="0" r="8" fill="#e17055" />
+                            <circle cx="16" cy="0" r="12" fill="#d63031" />
+                            <circle cx="18" cy="-5" r="4" fill="white" /><circle cx="19" cy="-5" r="2" fill="black" />
+                            <circle cx="18" cy="5" r="4" fill="white" /><circle cx="19" cy="5" r="2" fill="black" />
+                        </g>
+
+                        <!-- 树懒角色 -->
+                        <g id="model-sloth">
+                            <ellipse cx="0" cy="0" rx="25" ry="35" fill="#a4b0be" />
+                            <ellipse cx="0" cy="-20" rx="20" ry="18" fill="#ced6e0" />
+                            <path d="M -20 -15 Q -10 -30 0 -15 T 20 -15" stroke="#747d8c" stroke-width="8" stroke-linecap="round" fill="none"/>
+                            <path d="M -15 -20 Q -10 -15 -5 -20" stroke="#2f3542" stroke-width="2" fill="none"/>
+                            <path d="M 5 -20 Q 10 -15 15 -20" stroke="#2f3542" stroke-width="2" fill="none"/>
+                            <circle cx="0" cy="-10" r="4" fill="#2f3542" />
+                            <!-- 手脚抱树 -->
+                            <path d="M -20 10 Q -40 10 -40 -10" stroke="#a4b0be" stroke-width="12" stroke-linecap="round" fill="none"/>
+                            <path d="M 20 10 Q 40 10 40 -10" stroke="#a4b0be" stroke-width="12" stroke-linecap="round" fill="none"/>
+                        </g>
+                    </defs>
+
+                    <!-- 背景环境层 -->
+                    <g id="env-sky">
+                        <rect width="400" height="650" fill="#dff9fb" />
+                        <circle cx="330" cy="60" r="30" fill="#f6e58d" />
+                        <path d="M 50 80 Q 70 60 90 80 T 130 80" stroke="white" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.8"/>
+                    </g>
+
+                    <!-- 三大场景容器 -->
+                    
+                    <!-- 1. 深坑场景 (蚂蚁) -->
+                    <g id="scene-pit" style="display: none;">
+                        <rect x="0" y="150" width="400" height="500" fill="url(#pitDirt)" />
+                        <path d="M 0 150 Q 50 140 100 150 T 200 150 T 300 150 T 400 150 L 400 160 L 0 160 Z" fill="#2ed573" />
+                        <path d="M 120 150 L 120 620 Q 120 630 140 630 L 260 630 Q 280 630 280 620 L 280 150 Z" fill="#2f3640" />
+                    </g>
+
+                    <!-- 2. 爬树场景 (树懒) -->
+                    <g id="scene-tree" style="display: none;">
+                        <rect x="0" y="600" width="400" height="50" fill="#badc58" />
+                        <!-- 树干 -->
+                        <rect x="150" y="100" width="100" height="520" fill="url(#treeBark)" />
+                        <path d="M 150 100 Q 200 50 250 100" fill="#6ab04c" /> <!-- 树冠底 -->
+                    </g>
+
+                    <!-- 3. 水缸场景 (打水) -->
+                    <g id="scene-tank" style="display: none;">
+                        <rect x="0" y="550" width="400" height="100" fill="#dfe6e9" /> <!-- 地板 -->
+                        <path d="M 120 150 L 120 580 A 20 20 0 0 0 140 600 L 260 600 A 20 20 0 0 0 280 580 L 280 150" stroke="#7f8fa6" stroke-width="10" fill="none" />
+                        <!-- 动态水体 -->
+                        <rect id="water-fill" class="smooth-move" x="125" y="595" width="150" height="0" fill="url(#waterGrad)" opacity="0.9"/>
+                        <!-- 水面波纹 -->
+                        <path id="water-top" class="smooth-move" d="M 125 595 Q 162.5 595 200 595 T 275 595" stroke="#74b9ff" stroke-width="5" fill="none" opacity="0.9"/>
+                    </g>
+
+                    <!-- 超精细全数字刻度尺 (所有场景共用，放置在左侧) -->
+                    <!-- 给2年级学生：要求每个数字的刻度线 -->
+                    <g id="ruler-group" transform="translate(60, 0)">
+                        <rect x="-20" y="80" width="60" height="550" fill="white" opacity="0.8" rx="10" />
+                        <g id="ruler-marks"></g>
+                    </g>
+
+                    <!-- 目标指示虚线 -->
+                    <line id="target-line" x1="100" x2="300" y1="150" y2="150" stroke="#eb4d4b" stroke-width="3" stroke-dasharray="6,4" opacity="0" class="smooth-move" />
+
+                    <!-- 动态角色容器 -->
+                    <g id="char-container" class="smooth-move" transform="translate(200, 600)">
+                        <g id="char-inner">
+                            <!-- JS 中动态挂载 model-ant 或 model-sloth -->
+                        </g>
+                    </g>
+
+                    <!-- 胜利横幅 -->
+                    <g id="victory-banner" transform="translate(200, -50)" opacity="0" class="smooth-move">
+                        <rect x="-100" y="-25" width="200" height="50" rx="25" fill="#f0932b" />
+                        <text x="0" y="7" font-family="ZCOOL KuaiLe" font-size="24" fill="white" text-anchor="middle">🎉 目标完成！</text>
+                    </g>
+
+                </svg>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="bg-white p-3 border-t-2 border-gray-100 flex gap-2 z-10">
+                <button id="btn-up" onclick="doAction('up')" class="flex-1 bg-orange-400 hover:bg-orange-500 text-white font-bold text-lg py-4 rounded-2xl shadow-md transition-all active:scale-95 flex flex-col items-center">
+                    <span class="text-2xl leading-none mb-1">☀️</span>
+                    <span id="txt-btn-up">白天爬</span>
+                </button>
+                <button id="btn-down" onclick="doAction('down')" disabled class="flex-1 bg-gray-200 text-gray-400 font-bold text-lg py-4 rounded-2xl transition-all flex flex-col items-center cursor-not-allowed">
+                    <span class="text-2xl leading-none mb-1 text-gray-300">🌙</span>
+                    <span id="txt-btn-down">晚上滑</span>
+                </button>
+                <button onclick="resetCurrentLevel()" class="w-20 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold py-4 rounded-2xl transition-all active:scale-95 flex flex-col items-center border border-emerald-200">
+                    <span class="text-xl leading-none mb-1">🔄</span>
+                    <span class="text-xs">重来</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 右侧：流水账日记 (占 3 列) -->
+        <section class="lg:col-span-3 bg-white rounded-3xl shadow-xl border-2 border-gray-100 p-4 flex flex-col h-[600px] lg:h-auto">
+            <h3 class="text-lg font-bold text-gray-800 border-b-2 border-gray-100 pb-2 mb-3 flex items-center gap-2">
+                <span>📝</span> 过程日记账
+            </h3>
+            <div id="log-list" class="flex-grow overflow-y-auto no-scrollbar space-y-2 pr-1">
+                <!-- 日志 -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 音效 (浏览器基础提示音) -->
+    <script>
+        // --- 1. 关卡数据配置 (严格按照图片要求) ---
+        const levelsData = {
+            t1: {
+                id: 't1', title: '探索1',
+                theme: 'pit', char: 'ant', unit: '米',
+                target: 20, dayUp: 5, nightDown: 2, totalDays: 6, lastDayUp: 5,
+                actionUpText: '白天爬 5 米', actionDownText: '晚上滑 2 米',
+                story: `一只小蚂蚁掉进了一个 <b class="text-orange-500 text-lg">20米</b> 深的深坑。它每天白天向上爬 <b class="text-orange-500 text-lg">5米</b>，晚上睡觉时又会滑下 <b class="text-blue-500 text-lg">2米</b>。请问小蚂蚁第几天刚好爬出深坑呢？`,
+                math: `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-orange-100">
+                        <p class="font-bold text-orange-600 mb-1">① 留出最后一天直达：</p>
+                        <p class="text-gray-600 mb-1">最后一天白天只要爬出去了，就不需要再滑下来啦！</p>
+                        <p class="font-mono font-bold bg-orange-50 px-2 py-1 inline-block rounded">20 - 5 = 15 米</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-emerald-100">
+                        <p class="font-bold text-emerald-600 mb-1">② 算算前几天爬了多久：</p>
+                        <p class="text-gray-600 mb-1">每天实际只前进了：<span class="font-mono">5 - 2 = 3 米</span></p>
+                        <p class="font-mono font-bold bg-emerald-50 px-2 py-1 inline-block rounded">15 ÷ 3 = 5 天</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                        <p class="font-bold text-blue-600 mb-1">③ 加上最后一天：</p>
+                        <p class="font-mono font-black text-xl bg-blue-50 px-3 py-1 inline-block rounded border border-blue-200">5 + 1 = 6 天</p>
+                    </div>`
+            },
+            t3: {
+                id: 't3', title: '探索3',
+                theme: 'tank', char: 'water', unit: '桶',
+                target: 33, dayUp: 7, nightDown: 2, totalDays: 7, lastDayUp: 3,
+                actionUpText: '白天加 7 桶', actionDownText: '晚上用 2 桶',
+                story: `装满一个空水缸需要 <b class="text-orange-500 text-lg">33桶</b> 水，洋洋每天白天打回 <b class="text-orange-500 text-lg">7桶</b> 水，晚上又会用掉 <b class="text-blue-500 text-lg">2桶</b>。这一天，洋洋刚倒入 <b class="text-green-600 text-lg">3桶</b> 水，水缸正好第一次被装满，请问这一天是第几天？`,
+                math: `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-orange-100">
+                        <p class="font-bold text-orange-600 mb-1">① 看最后一天：</p>
+                        <p class="text-gray-600 mb-1">题目说最后一天只倒了 3 桶就满了！所以前几天装了：</p>
+                        <p class="font-mono font-bold bg-orange-50 px-2 py-1 inline-block rounded">33 - 3 = 30 桶</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-emerald-100">
+                        <p class="font-bold text-emerald-600 mb-1">② 算算前几天：</p>
+                        <p class="text-gray-600 mb-1">每天实际存下：<span class="font-mono">7 - 2 = 5 桶</span></p>
+                        <p class="font-mono font-bold bg-emerald-50 px-2 py-1 inline-block rounded">30 ÷ 5 = 6 天</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                        <p class="font-bold text-blue-600 mb-1">③ 加上最后一天：</p>
+                        <p class="font-mono font-black text-xl bg-blue-50 px-3 py-1 inline-block rounded border border-blue-200">6 + 1 = 7 天</p>
+                    </div>`
+            },
+            t4: {
+                id: 't4', title: '探索4',
+                theme: 'tree', char: 'sloth', unit: '米',
+                target: 34, dayUp: 6, nightDown: 2, totalDays: 8, lastDayUp: 6,
+                actionUpText: '白天爬 6 米', actionDownText: '晚上滑 2 米',
+                story: `一只树懒向上爬，每天白天爬 <b class="text-orange-500 text-lg">6米</b>，晚上滑下 <b class="text-blue-500 text-lg">2米</b>，第 <b class="text-purple-500 text-lg">8天</b> 爬了 <b class="text-green-600 text-lg">6米</b> 后刚好到了树顶。请问这棵树高多少米？`,
+                math: `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-orange-100">
+                        <p class="font-bold text-orange-600 mb-1">① 拆分天数：</p>
+                        <p class="text-gray-600 mb-1">总共8天，也就是前面爬了 7 个完整的“白天+黑夜”，第8天只爬了白天！</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-emerald-100">
+                        <p class="font-bold text-emerald-600 mb-1">② 算前7天的总高度：</p>
+                        <p class="text-gray-600 mb-1">每天实际前进 <span class="font-mono">6 - 2 = 4 米</span></p>
+                        <p class="font-mono font-bold bg-emerald-50 px-2 py-1 inline-block rounded">7 × 4 = 28 米</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                        <p class="font-bold text-blue-600 mb-1">③ 加上第8天的冲刺：</p>
+                        <p class="font-mono font-black text-xl bg-blue-50 px-3 py-1 inline-block rounded border border-blue-200">28 + 6 = 34 米</p>
+                    </div>`
+            },
+            t5: {
+                id: 't5', title: '探索5',
+                theme: 'pit', char: 'ant', unit: '米',
+                target: 24, dayUp: 5, nightDown: 1, totalDays: 6, lastDayUp: 4,
+                actionUpText: '白天爬 5 米', actionDownText: '晚上滑 1 米',
+                story: `蚂蚁从井底往上爬，白天爬 <b class="text-orange-500 text-lg">5米</b>，晚上滑下 <b class="text-blue-500 text-lg">1米</b>。第 <b class="text-purple-500 text-lg">6天</b> 只爬了 <b class="text-green-600 text-lg">4米</b> 就到了井口。算一算，这口井有多深？`,
+                math: `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-orange-100">
+                        <p class="font-bold text-orange-600 mb-1">① 拆分天数：</p>
+                        <p class="text-gray-600 mb-1">总共6天，前面经历了 5 个完整的“白天+黑夜”。</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-emerald-100">
+                        <p class="font-bold text-emerald-600 mb-1">② 算前5天的总高度：</p>
+                        <p class="text-gray-600 mb-1">每天实际前进 <span class="font-mono">5 - 1 = 4 米</span></p>
+                        <p class="font-mono font-bold bg-emerald-50 px-2 py-1 inline-block rounded">5 × 4 = 20 米</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                        <p class="font-bold text-blue-600 mb-1">③ 加上第6天最后爬的：</p>
+                        <p class="font-mono font-black text-xl bg-blue-50 px-3 py-1 inline-block rounded border border-blue-200">20 + 4 = 24 米</p>
+                    </div>`
+            },
+            t7: {
+                id: 't7', title: '探索7',
+                theme: 'tree', char: 'sloth', unit: '米',
+                target: 25, dayUp: 6, nightDown: 3, totalDays: 8, lastDayUp: 4, // dayUp is derived mathematically as 6
+                actionUpText: '白天爬 (算出来的)', actionDownText: '晚上滑 3 米',
+                story: `树懒爬一棵 <b class="text-orange-500 text-lg">25米</b> 高的树。每次向上爬若干米，接着滑下 <b class="text-blue-500 text-lg">3米</b>。第 <b class="text-purple-500 text-lg">8次</b> 爬了 <b class="text-green-600 text-lg">4米</b> 就到了树顶，树懒每次向上爬了几米？`,
+                math: `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-orange-100">
+                        <p class="font-bold text-orange-600 mb-1">① 减去最后一次：</p>
+                        <p class="text-gray-600 mb-1">最后一次它只爬了4米就到顶了。前7次一共爬了多少？</p>
+                        <p class="font-mono font-bold bg-orange-50 px-2 py-1 inline-block rounded">25 - 4 = 21 米</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-emerald-100">
+                        <p class="font-bold text-emerald-600 mb-1">② 算每次实际前进多少：</p>
+                        <p class="text-gray-600 mb-1">前7次总共前进了21米，所以每一次（爬+滑）净前进：</p>
+                        <p class="font-mono font-bold bg-emerald-50 px-2 py-1 inline-block rounded">21 ÷ 7 = 3 米</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-blue-100">
+                        <p class="font-bold text-blue-600 mb-1">③ 补回滑下的距离：</p>
+                        <p class="text-gray-600 mb-1">因为每次滑下3米后还剩3米，所以原来爬了：</p>
+                        <p class="font-mono font-black text-xl bg-blue-50 px-3 py-1 inline-block rounded border border-blue-200">3 + 3 = 6 米</p>
+                    </div>`
+            }
+        };
+
+        // --- 2. 全局状态 ---
+        let currentLvl = null;
+        let state = {
+            val: 0,
+            day: 0,
+            phase: 'ready' // ready, day_done, night_done, success
+        };
+
+        const SVG_H = 480; // 可活动绘图区高度
+        const SVG_Y_BOTTOM = 580;
+        const SVG_Y_TOP = 100;
+
+        // --- 3. DOM 绑定 ---
+        const els = {
+            story: document.getElementById('story-board'),
+            math: document.getElementById('math-board'),
+            uiDay: document.getElementById('ui-day'),
+            uiVal: document.getElementById('ui-val'),
+            uiUnit: document.getElementById('ui-unit'),
+            
+            scenePit: document.getElementById('scene-pit'),
+            sceneTree: document.getElementById('scene-tree'),
+            sceneTank: document.getElementById('scene-tank'),
+            
+            charContainer: document.getElementById('char-container'),
+            charInner: document.getElementById('char-inner'),
+            modelAnt: document.getElementById('model-ant'),
+            modelSloth: document.getElementById('model-sloth'),
+            waterFill: document.getElementById('water-fill'),
+            waterTop: document.getElementById('water-top'),
+            
+            rulerMarks: document.getElementById('ruler-marks'),
+            targetLine: document.getElementById('target-line'),
+            victoryBanner: document.getElementById('victory-banner'),
+            
+            btnUp: document.getElementById('btn-up'),
+            btnDown: document.getElementById('btn-down'),
+            txtUp: document.getElementById('txt-btn-up'),
+            txtDown: document.getElementById('txt-btn-down'),
+            
+            logList: document.getElementById('log-list')
+        };
+
+        // --- 4. 刻度尺生成 (满足“每个数字都有刻度线”的强制要求) ---
+        function drawRuler(maxVal) {
+            els.rulerMarks.innerHTML = '';
+            const pxPerUnit = SVG_H / maxVal;
+            
+            for (let i = 0; i <= maxVal; i++) {
+                const yPos = SVG_Y_BOTTOM - (i * pxPerUnit);
+                
+                // 给每个数字画刻度线
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                // 逢5长线，其他短线
+                const isMajor = (i % 5 === 0) || (i === maxVal);
+                line.setAttribute("x1", isMajor ? "20" : "28");
+                line.setAttribute("x2", "38");
+                line.setAttribute("y1", yPos);
+                line.setAttribute("y2", yPos);
+                line.setAttribute("stroke", isMajor ? "#2d3436" : "#636e72");
+                line.setAttribute("stroke-width", isMajor ? "2" : "1");
+                els.rulerMarks.appendChild(line);
+
+                // 给每个数字写上文字 (字号稍微调小，排满不重叠)
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", isMajor ? "-10" : "-5");
+                text.setAttribute("y", yPos + 3); // 垂直居中微调
+                text.setAttribute("font-family", "Noto Sans SC");
+                text.setAttribute("font-weight", isMajor ? "bold" : "normal");
+                // 动态字号：数字越大，间隔越小，字号也稍微变小
+                text.setAttribute("font-size", maxVal > 30 ? "10" : "12");
+                text.setAttribute("fill", isMajor ? "#0984e3" : "#2d3436");
+                text.textContent = i;
+                els.rulerMarks.appendChild(text);
+            }
+
+            // 绘制目标红线 (未知目标的题，依然有一根线)
+            els.targetLine.setAttribute("y1", SVG_Y_BOTTOM - (maxVal * pxPerUnit));
+            els.targetLine.setAttribute("y2", SVG_Y_BOTTOM - (maxVal * pxPerUnit));
+            els.targetLine.setAttribute("opacity", "1");
+        }
+
+        // --- 5. 加载关卡 ---
+        function loadLevel(id) {
+            // UI 按钮高亮
+            document.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + id).classList.add('active');
+
+            currentLvl = levelsData[id];
+            
+            // 填充文本
+            els.story.innerHTML = currentLvl.story;
+            els.math.innerHTML = currentLvl.math;
+            els.uiUnit.textContent = currentLvl.unit;
+            els.txtUp.textContent = currentLvl.actionUpText;
+            els.txtDown.textContent = currentLvl.actionDownText;
+            if(id==='t7') els.txtUp.textContent = `白天爬 6 米 (结算)`; // 补充给学生的明确暗示
+
+            // 场景切换
+            els.scenePit.style.display = 'none';
+            els.sceneTree.style.display = 'none';
+            els.sceneTank.style.display = 'none';
+            els.charInner.innerHTML = '';
+            els.waterFill.setAttribute('height', '0');
+            els.waterTop.setAttribute('opacity', '0');
+
+            if (currentLvl.theme === 'pit') {
+                els.scenePit.style.display = 'block';
+                els.charInner.appendChild(els.modelAnt.cloneNode(true));
+                els.charContainer.setAttribute("transform", `translate(160, ${SVG_Y_BOTTOM}) rotate(-90)`);
+            } else if (currentLvl.theme === 'tree') {
+                els.sceneTree.style.display = 'block';
+                els.charInner.appendChild(els.modelSloth.cloneNode(true));
+                els.charContainer.setAttribute("transform", `translate(200, ${SVG_Y_BOTTOM})`);
+            } else if (currentLvl.theme === 'tank') {
+                els.sceneTank.style.display = 'block';
+            }
+
+            drawRuler(currentLvl.target);
+            resetCurrentLevel();
+        }
+
+        // --- 6. 核心动作逻辑 ---
+        function updateVisuals() {
+            const pxPerUnit = SVG_H / currentLvl.target;
+            const yPos = SVG_Y_BOTTOM - (state.val * pxPerUnit);
+
+            // 更新UI数字
+            els.uiVal.textContent = state.val;
+            els.uiDay.textContent = state.day;
+
+            // 更新动画图形
+            if (currentLvl.theme === 'tank') {
+                const h = state.val * pxPerUnit;
+                els.waterFill.setAttribute("height", h);
+                els.waterFill.setAttribute("y", SVG_Y_BOTTOM - h);
+                
+                if (state.val > 0) {
+                    els.waterTop.setAttribute("opacity", "0.9");
+                    els.waterTop.setAttribute("d", `M 125 ${SVG_Y_BOTTOM - h} Q 162.5 ${SVG_Y_BOTTOM - h - 5} 200 ${SVG_Y_BOTTOM - h} T 275 ${SVG_Y_BOTTOM - h}`);
+                } else {
+                    els.waterTop.setAttribute("opacity", "0");
+                }
+            } else {
+                // 实体角色移动
+                if (currentLvl.theme === 'pit') {
+                    els.charContainer.setAttribute("transform", `translate(160, ${yPos}) rotate(-90)`);
+                } else {
+                    els.charContainer.setAttribute("transform", `translate(200, ${yPos})`);
+                }
+
+                // 走路/爬树微动效
+                els.charInner.classList.add('anim-wiggle');
+                setTimeout(() => els.charInner.classList.remove('anim-wiggle'), 600);
+            }
+
+            // 成功动画
+            if (state.phase === 'success') {
+                els.victoryBanner.setAttribute("transform", "translate(200, 150)");
+                els.victoryBanner.setAttribute("opacity", "1");
+                
+                if(currentLvl.theme === 'pit') {
+                    // 蚂蚁爬出坑口站立
+                    els.charContainer.setAttribute("transform", `translate(250, 140) rotate(0) scale(1.2)`);
+                }
+            } else {
+                els.victoryBanner.setAttribute("transform", "translate(200, -50)");
+                els.victoryBanner.setAttribute("opacity", "0");
+            }
+            
+            updateButtons();
+        }
+
+        function updateButtons() {
+            if (state.phase === 'ready' || state.phase === 'night_done') {
+                els.btnUp.disabled = false;
+                els.btnUp.className = "flex-1 bg-orange-400 hover:bg-orange-500 text-white font-bold text-lg py-4 rounded-2xl shadow-md transition-all active:scale-95 flex flex-col items-center border-b-4 border-orange-600";
+                
+                els.btnDown.disabled = true;
+                els.btnDown.className = "flex-1 bg-gray-100 text-gray-300 font-bold text-lg py-4 rounded-2xl transition-all flex flex-col items-center cursor-not-allowed";
+            } else if (state.phase === 'day_done') {
+                els.btnUp.disabled = true;
+                els.btnUp.className = "flex-1 bg-gray-100 text-gray-300 font-bold text-lg py-4 rounded-2xl transition-all flex flex-col items-center cursor-not-allowed";
+                
+                els.btnDown.disabled = false;
+                els.btnDown.className = "flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold text-lg py-4 rounded-2xl shadow-md transition-all active:scale-95 flex flex-col items-center border-b-4 border-blue-700";
+            } else if (state.phase === 'success') {
+                els.btnUp.disabled = true;
+                els.btnDown.disabled = true;
+                els.btnUp.className = "flex-1 bg-gray-100 text-gray-300 font-bold text-lg py-4 rounded-2xl transition-all flex flex-col items-center cursor-not-allowed";
+                els.btnDown.className = "flex-1 bg-gray-100 text-gray-300 font-bold text-lg py-4 rounded-2xl transition-all flex flex-col items-center cursor-not-allowed";
+            }
+        }
+
+        function addLog(text, isSuccess=false) {
+            const div = document.createElement('div');
+            const color = isSuccess ? 'bg-green-100 border-green-300 text-green-800 font-bold scale-105 my-2 transform' : 'bg-gray-50 border-gray-200 text-gray-700';
+            div.className = `p-3 rounded-xl border ${color} text-[13px] leading-tight shadow-sm transition-all`;
+            div.innerHTML = text;
+            els.logList.appendChild(div);
+            els.logList.scrollTop = els.logList.scrollHeight;
+        }
+
+        function doAction(type) {
+            if (state.phase === 'success') return;
+
+            if (type === 'up') {
+                state.day++;
+                state.phase = 'day_done';
+                
+                // 判断是否是最后一天冲刺
+                let addAmt = currentLvl.dayUp;
+                let isLastDay = false;
+                
+                // 逻辑拦截：如果这一步直接达到或超过目标，这就是最后一步
+                // 或者对于固定天数的题目（探索4,5,7），达到了指定的天数
+                if (state.day === currentLvl.totalDays) {
+                    addAmt = currentLvl.lastDayUp;
+                    isLastDay = true;
+                } else if (state.val + addAmt >= currentLvl.target) {
+                    addAmt = currentLvl.target - state.val; // 截断到满
+                    isLastDay = true;
+                }
+
+                state.val += addAmt;
+                addLog(`☀️ <b>第${state.day}天白天：</b> 增加了 <span class="text-orange-600 font-bold">+${addAmt}</span> ${currentLvl.unit}，来到 <b>${state.val}</b> ${currentLvl.unit}。`);
+
+                if (state.val >= currentLvl.target || isLastDay) {
+                    state.val = currentLvl.target; // 确保不超界
+                    state.phase = 'success';
+                    addLog(`🎉 <b>大功告成！</b> 目标在第 ${state.day} 天白天被完美达成！不用再往下滑啦。`, true);
+                }
+
+            } else if (type === 'down') {
+                state.phase = 'night_done';
+                let subAmt = currentLvl.nightDown;
+                state.val = Math.max(0, state.val - subAmt);
+                
+                addLog(`🌙 <b>第${state.day}天夜晚：</b> 减少了 <span class="text-blue-600 font-bold">-${subAmt}</span> ${currentLvl.unit}，掉回 <b>${state.val}</b> ${currentLvl.unit}。`);
+            }
+
+            updateVisuals();
+        }
+
+        function resetCurrentLevel() {
+            state.val = 0;
+            state.day = 0;
+            state.phase = 'ready';
+            
+            els.logList.innerHTML = `<div class="text-center text-gray-400 text-sm mt-4">等待点击操作...<br>请点击左下角的黄色按钮。</div>`;
+            
+            updateVisuals();
+        }
+
+        // --- 7. 初始化启动 ---
+        window.onload = () => {
+            loadLevel('t1'); // 默认加载探索1
+        };
+    </script>
+</body>
+</html>
